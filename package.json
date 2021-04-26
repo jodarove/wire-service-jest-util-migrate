@@ -1,0 +1,24 @@
+{
+  "name": "wire-service-jest-util-migrate",
+  "version": "0.0.1",
+  "description": "Tool to migrate jest tests using @salesforce/wire-service-jest-util v2.x to v3.x",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jodarove/wire-service-jest-util-migrate.git"
+  },
+  "keywords": [
+    "@salesforce/wire-service-jest-util",
+    "jscodeshift",
+    "codemod",
+    "racast"
+  ],
+  "author": "Jose David Rodriguez Velasco",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jodarove/wire-service-jest-util-migrate/issues"
+  },
+  "homepage": "https://github.com/jodarove/wire-service-jest-util-migrate#readme"
+}
