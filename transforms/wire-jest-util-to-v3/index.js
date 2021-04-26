@@ -1,5 +1,6 @@
 /**
- * This replaces every occurrence of variable "foo".
+ * This re-write tests that use register* from @salesforce/sfdx-lwc-jest according
+ * the migration guide (https://github.com/salesforce/wire-service-jest-util/blob/master/docs/migrating-from-version-2.x-to-3.x.md)
  */
 module.exports = function(fileInfo, api) {
     const j = api.jscodeshift;
@@ -13,9 +14,12 @@ module.exports = function(fileInfo, api) {
                 path.source.value === '@salesforce/wire-service-jest-util' ||
                 path.source.value === 'wire-service-jest-util'
 
-            // @todo: maybe verify they are register*?
             if (isWSJU) {
-                path.specifiers.forEach(specifier => usedRegisterMethods.add(specifier.local.name));
+                path.specifiers.forEach((specifier) => {
+                    if (specifier.imported.name.startsWith('register')) {
+                        usedRegisterMethods.add(specifier.local.name)
+                    }
+                });
             }
 
             return isWSJU;
