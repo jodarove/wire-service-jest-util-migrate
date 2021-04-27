@@ -2,31 +2,34 @@
  * This re-write tests that use register* from @salesforce/sfdx-lwc-jest according
  * the migration guide (https://github.com/salesforce/wire-service-jest-util/blob/master/docs/migrating-from-version-2.x-to-3.x.md)
  */
+const WireServiceJestUtilAliases = new Set([
+    '@salesforce/sfdx-lwc-jest',
+    '@salesforce/wire-service-jest-util',
+    'wire-service-jest-util',
+]);
+
 module.exports = function(fileInfo, api) {
     const j = api.jscodeshift;
 
     const root = api.jscodeshift(fileInfo.source);
 
-    const usedRegisterMethods = new Set();
-    const removedRegisterMethodsImports = root
-        .find(j.ImportDeclaration, (path) => {
-            const isWSJU = path.source.value === '@salesforce/sfdx-lwc-jest' ||
-                path.source.value === '@salesforce/wire-service-jest-util' ||
-                path.source.value === 'wire-service-jest-util'
+    const importsFromWSJU = root
+        .find(j.ImportDeclaration, ({ source: { value }}) => WireServiceJestUtilAliases.has(value));
 
-            if (isWSJU) {
-                path.specifiers.forEach((specifier) => {
-                    if (specifier.imported.name.startsWith('register')) {
-                        usedRegisterMethods.add(specifier.local.name)
-                    }
-                });
-            }
+    const usedRegisterMethods = new Set(
+        importsFromWSJU.nodes().reduce((acc, { specifiers }) => {
+            acc.push(...specifiers.map(({ local: { name }}) => name));
 
-            return isWSJU;
-        })
-        .remove();
+            return acc;
+        }, [])
+    );
 
-    if (!removedRegisterMethodsImports) {
+    // We can safely remove imports from @salesforce/wire-service-jest-util because in v2
+    // the only exported methods are register*
+    const removedImportsFromWSJU = importsFromWSJU.remove();
+
+    if (!removedImportsFromWSJU) {
+        // no transformations needed
         return null;
     }
 
