@@ -33,23 +33,23 @@ module.exports = function(fileInfo, api) {
         return null;
     }
 
-    // Find variable declarations using register*
-    const variableNames = new Map();
-    const testAdapterVariableDeclaration = root
-        .find(j.VariableDeclarator, (path) => {
-            const { init } = path
-            if (init && init.type === 'CallExpression' && init.callee.type === 'Identifier' && usedRegisterMethods.has(init.callee.name)) {
-                variableNames.set(path.id.name, init.arguments[0].name);
-                return true;
-            }
-        });
+    // Find variable declarations initialized with register* calls, ex: const getRecordWireAdapter = registerLdsTestWireAdapter(getRecord);
+    // Then replaces usages "getRecordWireAdapter" with "getRecord"
+    // and finally removes the variable declaration.
+    root
+        .find(
+            j.VariableDeclarator,
+            ({ init }) => init && init.type === 'CallExpression' &&
+                init.callee.type === 'Identifier' && usedRegisterMethods.has(init.callee.name)
+        )
+        .forEach(({ value: { id, init }}) => {
+            const newName = id.name;
+            const oldName = init.arguments[0].name;
 
-    variableNames.forEach((newName, oldName) => {
-        root.findVariableDeclarators(oldName)
-            .renameTo(newName);
-    });
-
-    testAdapterVariableDeclaration.remove();
+            root.findVariableDeclarators(oldName)
+                .renameTo(newName);
+        })
+        .remove();
 
     // remove any remaining call to register methods ( like registerTestWireAdapter(Foo) )
     root
