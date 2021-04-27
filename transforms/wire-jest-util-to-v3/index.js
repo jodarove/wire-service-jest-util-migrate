@@ -39,23 +39,44 @@ module.exports = function(fileInfo, api) {
     root
         .find(
             j.VariableDeclarator,
-            ({ init }) => init && init.type === 'CallExpression' &&
-                init.callee.type === 'Identifier' && usedRegisterMethods.has(init.callee.name)
+            ({ init }) => {
+                return init && init.type === 'CallExpression' &&
+                    init.callee.type === 'Identifier' && usedRegisterMethods.has(init.callee.name)
+            }
         )
         .forEach(({ value: { id, init }}) => {
-            const newName = id.name;
-            const oldName = init.arguments[0].name;
+            const oldName = id.name;
+            const newName = init.arguments[0].name;
 
             root.findVariableDeclarators(oldName)
                 .renameTo(newName);
         })
         .remove();
 
-    // remove any remaining call to register methods ( like registerTestWireAdapter(Foo) )
+
+    // Finally lets remove any remaining calls to register*.
+    const maybeUnusedImport = new Set();
     root
         .find(j.CallExpression, ({ callee }) => callee.type === 'Identifier' && usedRegisterMethods.has(callee.name))
+        .forEach(({ value: callee }) => maybeUnusedImport.add(callee.arguments[0].name))
         .remove();
 
-    return root
-        .toSource();
+    maybeUnusedImport.forEach((identifierName) => {
+        const usages = root.find(j.Identifier, (ident) => ident.name === identifierName);
+        const hasUsagesOtherThanImports = usages.some((path) => path.parentPath.value.type !== 'ImportSpecifier');
+
+        if (!hasUsagesOtherThanImports) {
+            // remove that import specifier.
+            usages
+                .map(({ parentPath }) => parentPath)
+                .remove();
+        }
+    });
+
+    // finally lets remove any invalid import in the form of: import { } from '@salesforce/sfdx-lwc-test';
+    root
+        .find(j.ImportDeclaration, ({ specifiers }) => specifiers.length === 0)
+        .remove();
+
+    return root.toSource();
 }
